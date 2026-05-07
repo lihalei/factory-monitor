@@ -2,38 +2,193 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>工厂安防云监控</title>
+    <title>工厂安防云监控 - 智能安防网络示教平台</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #0a0f1e; color: #eee; padding: 20px; text-align: center; }
-        .card { background: rgba(18,25,45,0.8); border-radius: 20px; padding: 20px; margin: 20px auto; width: 350px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0f1e;
+            color: #eee;
+            overflow-x: hidden;
+        }
+        /* 主内容区域，预留右侧边栏空间 */
+        .main-content {
+            margin-right: 320px;
+            padding: 20px;
+            transition: margin-right 0.3s;
+        }
+        /* 侧边栏样式 */
+        .sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 320px;
+            height: 100vh;
+            background: rgba(25, 35, 55, 0.95);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid #2dd4bf;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+        }
+        /* 折叠状态 */
+        .sidebar.collapsed {
+            transform: translateX(100%);
+        }
+        .main-content.expanded {
+            margin-right: 0;
+        }
+        /* 折叠按钮 */
+        .toggle-btn {
+            position: fixed;
+            right: 330px;
+            top: 20px;
+            background: #2dd4bf;
+            border: none;
+            color: #0a0f1e;
+            font-size: 20px;
+            padding: 6px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            z-index: 1001;
+            transition: right 0.3s;
+            font-weight: bold;
+        }
+        .toggle-btn.shifted {
+            right: 20px;
+        }
+        /* 卡片样式（与原来一致） */
+        .card {
+            background: rgba(18, 25, 45, 0.8);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px auto;
+            width: 350px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
         .temp { font-size: 48px; color: #ff6b6b; }
         .humi { font-size: 48px; color: #4d9eff; }
         .finger { margin-top: 10px; padding: 10px; background: #00000055; border-radius: 12px; word-break: break-all; }
         .online { color: #2ecc71; }
         .offline { color: #e74c3c; }
-        .debug { font-size: 12px; background: #111; margin-top: 20px; padding: 10px; text-align: left; }
+        .debug { font-size: 12px; background: #111; margin-top: 20px; padding: 10px; text-align: left; max-height: 200px; overflow-y: auto; }
+        h1 { text-align: center; margin-bottom: 20px; }
+        h2 { margin-bottom: 15px; font-size: 1.4rem; border-left: 4px solid #2dd4bf; padding-left: 12px; }
+        h3 { color: #2dd4bf; margin-top: 20px; margin-bottom: 10px; }
+        .sidebar p, .sidebar li { font-size: 14px; line-height: 1.5; }
+        .sidebar ul { padding-left: 20px; margin: 10px 0; }
+        .code-block {
+            background: #00000088;
+            padding: 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        button {
+            background: #2dd4bf20;
+            border: 1px solid #2dd4bf;
+            color: #2dd4bf;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        button:hover {
+            background: #2dd4bf40;
+        }
     </style>
 </head>
 <body>
-    <h1>🏭 工厂安防云监控</h1>
-    <div id="status" class="offline">⏳ 连接 MQTT Broker 中...</div>
-    <div class="card">
-        <h2>温湿度</h2>
-        <div class="temp" id="temp">-- °C</div>
-        <div class="humi" id="humi">-- %</div>
-        <div id="alarm">报警状态: --</div>
+    <!-- 折叠/展开按钮 -->
+    <button id="toggleSidebarBtn" class="toggle-btn">📖 实验指导</button>
+
+    <!-- 主内容 -->
+    <div id="mainContent" class="main-content">
+        <h1>🏭 工厂安防云监控 - 智能安防网络示教平台</h1>
+        <div id="status" class="offline" style="text-align:center">⏳ 连接 MQTT Broker 中...</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+            <div class="card">
+                <h2>🌡️ 温湿度</h2>
+                <div class="temp" id="temp">-- °C</div>
+                <div class="humi" id="humi">-- %</div>
+                <div id="alarm">报警状态: --</div>
+            </div>
+            <div class="card">
+                <h2>🖐️ 指纹门禁</h2>
+                <div id="fingerStatus">等待指纹...</div>
+                <div class="finger" id="fingerRaw"></div>
+            </div>
+        </div>
+        <div class="debug" id="debug">
+            📡 调试信息:
+        </div>
     </div>
-    <div class="card">
-        <h2>指纹门禁</h2>
-        <div id="fingerStatus">等待指纹...</div>
-        <div class="finger" id="fingerRaw"></div>
-    </div>
-    <div class="debug" id="debug">
-        📡 调试信息:
+
+    <!-- 侧边栏（实验指导） -->
+    <div id="sidebar" class="sidebar">
+        <h3>📚 实验指导</h3>
+        <p><strong>实验目的：</strong>理解物联网智能安防系统的完整架构，掌握 ZigBee、WiFi、MQTT、Web 可视化等技术。</p>
+        <p><strong>系统组成：</strong> CC2530 ZigBee 温湿度节点 + 协调器 + ESP8266 网关 + 指纹模块 + 云端 MQTT + 前端大屏。</p>
+        <h3>🔧 实验步骤</h3>
+        <ol>
+            <li>检查硬件接线（查看引脚定义表）；</li>
+            <li>烧录 ESP8266 固件（需要修改 WiFi 和 MQTT 地址）；</li>
+            <li>烧录 CC2530 终端与协调器程序；</li>
+            <li>上电后，确认网页显示“已连接到云服务器”；</li>
+            <li>按压指纹，观察页面指纹状态更新；</li>
+            <li>用吹风机加热 DHT11，观察温度曲线变化；</li>
+            <li>修改湿度阈值，触发蜂鸣器报警。</li>
+        </ol>
+        <h3>💡 思考题</h3>
+        <ul>
+            <li>如何修改代码增加烟雾传感器？</li>
+            <li>MQTT QoS 0 和 QoS 1 的区别是什么？</li>
+            <li>为什么需要 ZigBee 协调器？能否直接用 WiFi 传输传感器数据？</li>
+        </ul>
+        <h3>📎 关键代码片段</h3>
+        <div class="code-block">
+            // ESP8266 发布温湿度<br>
+            client.publish("factory/temphumi", <br>
+            &nbsp;&nbsp;"{\"temp\":25.0,\"humi\":60.0}");
+        </div>
+        <h3>📊 系统架构图</h3>
+        <p><em>（可在此处插入图片链接）</em></p>
+        <p style="margin-top: 20px; font-size: 12px; color: #aaa;">※ 右侧面板可折叠</p>
     </div>
 
     <script>
+        // 侧边栏折叠逻辑
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const toggleBtn = document.getElementById('toggleSidebarBtn');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.classList.add('shifted');
+                toggleBtn.innerHTML = '📖 实验指导';
+            } else {
+                toggleBtn.classList.remove('shifted');
+                toggleBtn.innerHTML = '📖 实验指导';
+            }
+        }
+        toggleBtn.addEventListener('click', toggleSidebar);
+        // 初始状态展开
+        sidebar.classList.remove('collapsed');
+        mainContent.classList.remove('expanded');
+
+        // ========== MQTT 部分（与之前相同，增加调试信息） ==========
         const broker = 'wss://broker.emqx.io:8084/mqtt';
         const options = {
             connectTimeout: 4000,
@@ -48,6 +203,7 @@
             p.innerText = msg;
             debugDiv.appendChild(p);
             console.log(msg);
+            debugDiv.scrollTop = debugDiv.scrollHeight;
         }
 
         client.on('connect', () => {

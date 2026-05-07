@@ -2,38 +2,71 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>智能安防云监控</title>
+    <title>工厂安防云监控</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; background: #0a0f1e; color: #eee; padding: 20px; }
-        .card { background: rgba(18,25,45,0.8); border-radius: 20px; padding: 20px; margin: 10px; display: inline-block; width: 300px; }
-        .temp { color: #ff6b6b; font-size: 48px; }
-        .humi { color: #4d9eff; font-size: 48px; }
-        .finger { margin-top: 20px; }
+        body { font-family: Arial, sans-serif; background: #0a0f1e; color: #eee; padding: 20px; text-align: center; }
+        .card { background: rgba(18,25,45,0.8); border-radius: 20px; padding: 20px; margin: 20px auto; width: 300px; }
+        .temp { font-size: 48px; color: #ff6b6b; }
+        .humi { font-size: 48px; color: #4d9eff; }
+        .finger { margin-top: 10px; padding: 10px; background: #00000055; border-radius: 12px; word-break: break-all; }
+        .online { color: #2ecc71; font-size: 14px; }
+        .offline { color: #e74c3c; font-size: 14px; }
     </style>
 </head>
 <body>
-    <h1>工厂安防云监控</h1>
-    <div id="tempDisplay">-- °C</div>
-    <div id="humiDisplay">-- %</div>
-    <div id="fingerStatus">等待指纹...</div>
-    <div id="fingerRaw"></div>
+    <h1>🏭 工厂安防云监控</h1>
+    <div id="status" class="offline">⏳ 连接 MQTT Broker 中...</div>
+    <div class="card">
+        <h2>温湿度</h2>
+        <div class="temp" id="temp">-- °C</div>
+        <div class="humi" id="humi">-- %</div>
+        <div id="alarm">报警状态: --</div>
+    </div>
+    <div class="card">
+        <h2>指纹门禁</h2>
+        <div id="fingerStatus">等待指纹...</div>
+        <div class="finger" id="fingerRaw"></div>
+    </div>
+
     <script>
-        const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
+        const broker = 'wss://broker.emqx.io:8084/mqtt';
+        const options = {
+            connectTimeout: 4000,
+            clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+            username: '',
+            password: '',
+            keepalive: 60
+        };
+        const client = mqtt.connect(broker, options);
+
         client.on('connect', () => {
-            client.subscribe('factory/data/temphumi');
-            client.subscribe('factory/data/finger');
+            document.getElementById('status').innerHTML = '✅ 已连接到云服务器';
+            document.getElementById('status').className = 'online';
+            client.subscribe('factory/#', (err) => {
+                if (err) console.log('订阅失败', err);
+            });
         });
+
         client.on('message', (topic, message) => {
             const data = JSON.parse(message.toString());
-            if (topic === 'factory/data/temphumi') {
-                document.getElementById('tempDisplay').innerHTML = data.temp.toFixed(1) + ' °C';
-                document.getElementById('humiDisplay').innerHTML = data.humi.toFixed(1) + ' %';
-            } else if (topic === 'factory/data/finger') {
-                document.getElementById('fingerStatus').innerHTML = data.success ? `✅ 验证成功 ID:${data.userId}` : '⏳ 等待指纹';
-                document.getElementById('fingerRaw').innerHTML = `原始: ${data.raw}`;
+            if (topic === 'factory/temphumi') {
+                document.getElementById('temp').innerHTML = data.temp.toFixed(1) + ' °C';
+                document.getElementById('humi').innerHTML = data.humi.toFixed(1) + ' %';
+                document.getElementById('alarm').innerHTML = data.alarm ? '🔔 湿度超限报警！' : '✅ 湿度正常';
+            } else if (topic === 'factory/finger') {
+                if (data.success) {
+                    document.getElementById('fingerStatus').innerHTML = `✅ 验证成功 (ID: ${data.userId}) 时间: ${data.time}`;
+                } else {
+                    document.getElementById('fingerStatus').innerHTML = '⏳ 等待指纹';
+                }
+                document.getElementById('fingerRaw').innerHTML = `原始数据: ${data.raw}`;
             }
+        });
+
+        client.on('error', (err) => {
+            document.getElementById('status').innerHTML = '❌ 连接错误，请刷新页面重试';
+            console.error(err);
         });
     </script>
 </body>

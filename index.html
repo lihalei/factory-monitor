@@ -6,12 +6,13 @@
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #0a0f1e; color: #eee; padding: 20px; text-align: center; }
-        .card { background: rgba(18,25,45,0.8); border-radius: 20px; padding: 20px; margin: 20px auto; width: 300px; }
+        .card { background: rgba(18,25,45,0.8); border-radius: 20px; padding: 20px; margin: 20px auto; width: 350px; }
         .temp { font-size: 48px; color: #ff6b6b; }
         .humi { font-size: 48px; color: #4d9eff; }
         .finger { margin-top: 10px; padding: 10px; background: #00000055; border-radius: 12px; word-break: break-all; }
-        .online { color: #2ecc71; font-size: 14px; }
-        .offline { color: #e74c3c; font-size: 14px; }
+        .online { color: #2ecc71; }
+        .offline { color: #e74c3c; }
+        .debug { font-size: 12px; background: #111; margin-top: 20px; padding: 10px; text-align: left; }
     </style>
 </head>
 <body>
@@ -28,45 +29,68 @@
         <div id="fingerStatus">等待指纹...</div>
         <div class="finger" id="fingerRaw"></div>
     </div>
+    <div class="debug" id="debug">
+        📡 调试信息:
+    </div>
 
     <script>
         const broker = 'wss://broker.emqx.io:8084/mqtt';
         const options = {
             connectTimeout: 4000,
             clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-            username: '',
-            password: '',
             keepalive: 60
         };
         const client = mqtt.connect(broker, options);
+        const debugDiv = document.getElementById('debug');
+
+        function addDebug(msg) {
+            const p = document.createElement('div');
+            p.innerText = msg;
+            debugDiv.appendChild(p);
+            console.log(msg);
+        }
 
         client.on('connect', () => {
+            addDebug('✅ 已连接到 MQTT Broker');
             document.getElementById('status').innerHTML = '✅ 已连接到云服务器';
             document.getElementById('status').className = 'online';
             client.subscribe('factory/#', (err) => {
-                if (err) console.log('订阅失败', err);
+                if (err) addDebug('❌ 订阅失败: ' + err);
+                else addDebug('📡 已订阅 factory/#');
             });
         });
 
         client.on('message', (topic, message) => {
-            const data = JSON.parse(message.toString());
-            if (topic === 'factory/temphumi') {
-                document.getElementById('temp').innerHTML = data.temp.toFixed(1) + ' °C';
-                document.getElementById('humi').innerHTML = data.humi.toFixed(1) + ' %';
-                document.getElementById('alarm').innerHTML = data.alarm ? '🔔 湿度超限报警！' : '✅ 湿度正常';
-            } else if (topic === 'factory/finger') {
-                if (data.success) {
-                    document.getElementById('fingerStatus').innerHTML = `✅ 验证成功 (ID: ${data.userId}) 时间: ${data.time}`;
-                } else {
-                    document.getElementById('fingerStatus').innerHTML = '⏳ 等待指纹';
+            const msgStr = message.toString();
+            addDebug(`📨 收到消息 [${topic}]: ${msgStr}`);
+            try {
+                const data = JSON.parse(msgStr);
+                if (topic === 'factory/temphumi') {
+                    if (typeof data.temp !== 'undefined') {
+                        document.getElementById('temp').innerHTML = data.temp.toFixed(1) + ' °C';
+                        document.getElementById('humi').innerHTML = data.humi.toFixed(1) + ' %';
+                        document.getElementById('alarm').innerHTML = data.alarm ? '🔔 湿度超限报警！' : '✅ 湿度正常';
+                    } else {
+                        addDebug('⚠️ 温湿度数据缺少 temp/humi 字段');
+                    }
+                } else if (topic === 'factory/finger') {
+                    if (data.success === 1 || data.success === true) {
+                        document.getElementById('fingerStatus').innerHTML = `✅ 验证成功 (ID: ${data.userId}) 时间: ${data.time || '刚刚'}`;
+                    } else {
+                        document.getElementById('fingerStatus').innerHTML = '⏳ 等待指纹';
+                    }
+                    if (data.raw) {
+                        document.getElementById('fingerRaw').innerHTML = `原始数据: ${data.raw}`;
+                    }
                 }
-                document.getElementById('fingerRaw').innerHTML = `原始数据: ${data.raw}`;
+            } catch (e) {
+                addDebug(`❌ JSON 解析错误: ${e.message}`);
             }
         });
 
         client.on('error', (err) => {
+            addDebug(`❌ 连接错误: ${err.message}`);
             document.getElementById('status').innerHTML = '❌ 连接错误，请刷新页面重试';
-            console.error(err);
         });
     </script>
 </body>

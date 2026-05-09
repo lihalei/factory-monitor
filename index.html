@@ -2,566 +2,325 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>工厂安防云监控 - 智能安防网络示教平台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能安防网络示教平台 | 工厂环境监控</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-            background: linear-gradient(135deg, #0a0f1e 0%, #1a1f3a 100%);
-            color: #eee;
-            overflow-x: hidden;
+            background: radial-gradient(circle at 20% 30%, #0c1126, #020617);
+            font-family: 'Segoe UI', 'Poppins', 'Roboto', sans-serif;
+            color: #eef2ff;
             min-height: 100vh;
+            padding: 1.5rem;
         }
-
-        /* 主内容区域，预留右侧边栏空间 */
-        .main-content {
-            margin-right: 320px;
-            padding: 20px;
-            transition: margin-right 0.3s;
-        }
-
-        .main-content.expanded {
-            margin-right: 0;
-        }
-
-        /* 侧边栏样式 */
-        .sidebar {
-            position: fixed;
-            right: 0;
-            top: 0;
-            width: 320px;
-            height: 100vh;
-            background: rgba(25, 35, 55, 0.95);
-            backdrop-filter: blur(12px);
-            border-left: 1px solid #00d4ff;
-            padding: 20px;
-            overflow-y: auto;
-            z-index: 1000;
-            transition: transform 0.3s;
-            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(100%);
-        }
-
-        /* 折叠按钮 */
-        .toggle-btn {
-            position: fixed;
-            right: 330px;
-            top: 20px;
-            background: linear-gradient(135deg, #00d4ff, #00ff88);
-            border: none;
-            color: #0a0f1e;
-            font-size: 14px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            z-index: 1001;
-            transition: right 0.3s;
-            font-weight: bold;
-        }
-
-        .toggle-btn.shifted {
-            right: 20px;
-        }
-
-        /* 顶部标题栏 */
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            margin-bottom: 20px;
-            background: rgba(20, 30, 60, 0.6);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .header .title {
-            font-size: 2rem;
-            font-weight: bold;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            background: linear-gradient(90deg, #00d4ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .header .datetime {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            font-size: 1.1rem;
-        }
-
-        .header .date {
-            color: #00d4ff;
-        }
-
-        .header .time {
-            color: #00ff88;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* 连接状态 */
-        .status {
-            text-align: center;
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .status.online {
-            background: rgba(46, 204, 113, 0.2);
-            color: #2ecc71;
-        }
-
-        .status.offline {
-            background: rgba(231, 76, 60, 0.2);
-            color: #e74c3c;
-        }
-
-        /* 内容网格布局 */
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            max-width: 1920px;
+        .dashboard {
+            max-width: 1600px;
             margin: 0 auto;
+            position: relative;
         }
-
-        /* 模块通用样式 */
-        .module {
-            background: rgba(20, 30, 60, 0.7);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .module-header {
-            background: rgba(0, 212, 255, 0.1);
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .module-header h2 {
-            font-size: 1.3rem;
-            color: #00d4ff;
-            margin: 0;
-        }
-
-        .module-content {
-            padding: 20px;
-        }
-
-        /* 温湿度模块 */
-        .data-display {
+        .top-bar {
             display: flex;
-            justify-content: space-around;
-            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            padding: 0.8rem 2rem;
+            border-radius: 60px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(45, 212, 191, 0.3);
         }
-
-        .data-item {
-            text-align: center;
-            padding: 15px;
-            border-radius: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            flex: 1;
-            margin: 0 10px;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fff, #4f9eff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
-
-        .data-label {
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #0f172ab3;
+            padding: 6px 16px;
+            border-radius: 40px;
             font-size: 0.9rem;
-            color: #888;
-            margin-bottom: 5px;
         }
-
-        .data-value {
-            font-size: 2.5rem;
-            font-weight: bold;
+        .online-led {
+            width: 10px;
+            height: 10px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #2ecc71;
+            animation: pulse 1.5s infinite;
         }
-
-        .temperature .data-value {
-            color: #ff6b6b;
-        }
-
-        .humidity .data-value {
-            color: #4d9eff;
-        }
-
-        .unit {
-            font-size: 1rem;
-        }
-
-        .alarm-status {
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-
-        .alarm-status.alarm-on {
-            background: rgba(255, 159, 74, 0.2);
-            color: #ff9f4a;
-            animation: pulse 1s infinite;
-        }
-
-        .alarm-status:not(.alarm-on) {
-            background: rgba(46, 204, 113, 0.2);
-            color: #2ecc71;
-        }
-
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0% { opacity: 0.5; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
         }
-
-        /* 指纹模块 */
-        .finger-status {
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 1.8rem;
+        }
+        .cards-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+        }
+        .card {
+            background: rgba(18, 25, 45, 0.65);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 1.5rem;
+            flex: 1;
+            min-width: 280px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s;
+            box-shadow: 0 20px 35px -15px rgba(0,0,0,0.4);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #2dd4bf;
+            box-shadow: 0 25px 40px -15px rgba(0,200,255,0.2);
+        }
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #2dd4bf;
+            padding-left: 12px;
+        }
+        .big-value {
+            font-size: 3.2rem;
+            font-weight: 700;
             text-align: center;
-            padding: 20px;
-            border-radius: 12px;
-            background: rgba(0, 0, 0, 0.3);
-            margin-bottom: 15px;
+            margin: 1rem 0;
         }
-
-        .finger-status .status-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
+        .temp-value { color: #f97316; text-shadow: 0 0 8px #f97316aa; }
+        .humi-value { color: #38bdf8; text-shadow: 0 0 8px #38bdf8aa; }
+        .finger-status {
+            font-size: 1.3rem;
+            text-align: center;
+            margin: 1rem 0;
+            font-weight: 500;
         }
-
-        .finger-status .status-text {
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
-
-        .finger-status.success {
-            background: rgba(46, 204, 113, 0.2);
-            color: #2ecc71;
-        }
-
-        .finger-status.waiting {
-            background: rgba(231, 76, 60, 0.2);
-            color: #e74c3c;
-        }
-
-        .finger-raw {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            color: #888;
+        .success { color: #10b981; }
+        .fail { color: #f43f5e; }
+        .raw-frame {
+            background: #00000080;
+            border-radius: 16px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.7rem;
             word-break: break-all;
-            max-height: 80px;
-            overflow-y: auto;
+            margin-top: 12px;
         }
-
-        /* 侧边栏样式 */
-        .sidebar h3 {
-            color: #00d4ff;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-
-        .sidebar p, .sidebar li {
-            font-size: 14px;
-            line-height: 1.6;
-            color: #ccc;
-        }
-
-        .sidebar ul {
-            padding-left: 20px;
-            margin: 10px 0;
-        }
-
-        .code-block {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 12px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            overflow-x: auto;
-            margin: 10px 0;
-            color: #00ff88;
-            border: 1px solid rgba(0, 255, 136, 0.2);
-        }
-
-        /* 调试区域 */
-        .debug {
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 20px;
-            padding: 15px;
-            text-align: left;
-            max-height: 250px;
-            overflow-y: auto;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-        }
-
-        .debug .debug-title {
-            color: #00d4ff;
-            margin-bottom: 10px;
+        .alarm-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 40px;
+            margin-top: 10px;
             font-weight: bold;
-            font-size: 14px;
         }
-
-        .debug .debug-line {
-            color: #aaa;
-            margin: 5px 0;
-            padding-left: 10px;
-            border-left: 2px solid #00d4ff;
+        .alarm-on {
+            background: #ff7b2c20;
+            color: #ff7b2c;
+            animation: blink 1s infinite;
         }
-
-        /* 滚动条样式 */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .alarm-off {
+            background: #2dd4bf20;
+            color: #2dd4bf;
         }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
         }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(0, 212, 255, 0.5);
-            border-radius: 4px;
+        .sidebar {
+            background: rgba(18, 25, 45, 0.9);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 1.5rem;
+            border: 1px solid rgba(45, 212, 191, 0.3);
+            height: fit-content;
+            position: sticky;
+            top: 1.5rem;
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 212, 255, 0.8);
+        .sidebar h3 {
+            color: #2dd4bf;
+            margin: 1rem 0 0.5rem 0;
+            font-size: 1.2rem;
         }
-
-        /* 响应式 */
-        @media (max-width: 1200px) {
-            .content {
+        .sidebar ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .sidebar li {
+            margin: 12px 0;
+        }
+        .sidebar a {
+            color: #2dd4bf;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .sidebar a:hover {
+            text-decoration: underline;
+        }
+        .debug-panel {
+            margin-top: 2rem;
+            background: #0f172a80;
+            border-radius: 24px;
+            padding: 1rem;
+            font-size: 0.75rem;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        @media (max-width: 900px) {
+            .main-grid {
                 grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+                margin-top: 1.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- 折叠/展开按钮 -->
-    <button id="toggleSidebarBtn" class="toggle-btn">📖 实验指导</button>
-
-    <!-- 主内容 -->
-    <div id="mainContent" class="main-content">
-        <!-- 顶部标题栏 -->
-        <header class="header">
-            <h1 class="title">🏭 工厂安防系统</h1>
-            <div class="datetime">
-                <span class="date" id="currentDate"></span>
-                <span class="time" id="currentTime"></span>
-            </div>
-        </header>
-
-        <!-- 连接状态 -->
-        <div id="status" class="status offline">⏳ 连接 MQTT Broker 中...</div>
-
-        <!-- 内容网格 -->
-        <div class="content">
-            <!-- 温湿度模块 -->
-            <div class="module">
-                <div class="module-header">
-                    <h2>🌡️ 温湿度模块</h2>
-                </div>
-                <div class="module-content">
-                    <div class="data-display">
-                        <div class="data-item temperature">
-                            <div class="data-label">温度</div>
-                            <div class="data-value"><span id="temp">--</span> <span class="unit">°C</span></div>
-                        </div>
-                        <div class="data-item humidity">
-                            <div class="data-label">湿度</div>
-                            <div class="data-value"><span id="humi">--</span> <span class="unit">%</span></div>
-                        </div>
-                    </div>
-                    <div class="alarm-status" id="alarmStatus">报警状态: --</div>
-                </div>
-            </div>
-
-            <!-- 指纹识别模块 -->
-            <div class="module">
-                <div class="module-header">
-                    <h2>🖐️ 指纹识别模块</h2>
-                </div>
-                <div class="module-content">
-                    <div class="finger-status waiting" id="fingerStatusDiv">
-                        <div class="status-icon">⏳</div>
-                        <div class="status-text" id="fingerStatusText">等待指纹...</div>
-                    </div>
-                    <div class="finger-raw" id="fingerRaw">原始数据: 无</div>
-                </div>
-            </div>
+<div class="dashboard">
+    <div class="top-bar">
+        <div class="logo">
+            <i class="fas fa-shield-alt"></i>
+            <span>智能安防网络示教平台</span>
         </div>
-
-        <!-- 调试区域 -->
-        <div class="debug" id="debug">
-            <div class="debug-title">📡 调试信息:</div>
+        <div class="status-badge">
+            <span class="online-led"></span>
+            <span id="mqttStatus">连接中...</span>
         </div>
     </div>
 
-    <!-- 侧边栏（实验指导） -->
-    <div id="sidebar" class="sidebar">
-        <h3>📚 实验指导</h3>
-        <p><strong>实验目的：</strong>理解物联网智能安防系统的完整架构，掌握 ZigBee、WiFi、MQTT、Web 可视化等技术。</p>
-        <p><strong>系统组成：</strong> CC2530 ZigBee 温湿度节点 + 协调器 + ESP8266 网关 + 指纹模块 + 云端 MQTT + 前端大屏。</p>
-        <h3>🔧 实验步骤</h3>
-        <ol>
-            <li>检查硬件接线（查看引脚定义表）；</li>
-            <li>烧录 ESP8266 固件（需要修改 WiFi 和 MQTT 地址）；</li>
-            <li>烧录 CC2530 终端与协调器程序；</li>
-            <li>上电后，确认网页显示“已连接到云服务器”；</li>
-            <li>按压指纹，观察页面指纹状态更新；</li>
-            <li>用吹风机加热 DHT11，观察温度曲线变化；</li>
-            <li>修改湿度阈值，触发蜂鸣器报警。</li>
-        </ol>
-        <h3>💡 思考题</h3>
-        <ul>
-            <li>如何修改代码增加烟雾传感器？</li>
-            <li>MQTT QoS 0 和 QoS 1 的区别是什么？</li>
-            <li>为什么需要 ZigBee 协调器？能否直接用 WiFi 传输传感器数据？</li>
-        </ul>
-        <h3>📎 关键代码片段</h3>
-        <div class="code-block">
-            // ESP8266 发布温湿度<br>
-            client.publish("factory/temphumi", <br>
-            &nbsp;&nbsp;"{\"temp\":25.0,\"humi\":60.0}");
+    <div class="main-grid">
+        <div class="cards-area">
+            <div class="card">
+                <h2><i class="fas fa-thermometer-half"></i> 环境监测</h2>
+                <div class="big-value temp-value" id="tempDisplay">-- °C</div>
+                <div class="big-value humi-value" id="humiDisplay">-- %</div>
+                <div style="text-align: center;">
+                    <span id="alarmDisplay" class="alarm-badge alarm-off">湿度正常</span>
+                </div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-fingerprint"></i> 指纹门禁</h2>
+                <div class="finger-status" id="fingerStatusText">等待指纹...</div>
+                <div id="fingerIdInfo" style="text-align:center; font-size:0.9rem;"></div>
+                <div class="raw-frame" id="rawDataFrame">原始数据: 无</div>
+            </div>
         </div>
-        <h3>📊 系统架构图</h3>
-        <p><em>（可在此处插入图片链接）</em></p>
-        <p style="margin-top: 20px; font-size: 12px; color: #aaa;">※ 右侧面板可折叠</p>
+
+        <div class="sidebar">
+            <h3><i class="fas fa-chalkboard-user"></i> 实验指导</h3>
+            <p><strong>📘 点击下方主题查看详细实验内容与代码：</strong></p>
+            <ul>
+                <li><a href="topic1-1.html" target="_blank">🔗 1.1 CC2530终端与协调器的无线传输</a></li>
+                <li><a href="topic1-2.html" target="_blank">🔗 1.2 ESP8266与协调器间的数据传输</a></li>
+                <li><a href="topic1-3.html" target="_blank">🔗 1.3 ESP8266与传感器间的数据传输</a></li>
+                <li><a href="topic1-4.html" target="_blank">🔗 1.4 ESP8266通过TCP协议传给客户端</a></li>
+                <li><a href="topic1-5.html" target="_blank">🔗 1.5 局域网映射到公网(MQTT协议)</a></li>
+            </ul>
+            <p style="margin-top: 20px;"><i class="fas fa-external-link-alt"></i> 点击链接将在新标签页打开详细实验指南。</p>
+        </div>
     </div>
 
-    <script>
-        // ========== 实时时钟更新 ==========
-        function updateDateTime() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            const weekDay = weekDays[now.getDay()];
-            document.getElementById('currentDate').textContent = `${year}-${month}-${day} ${weekDay}`;
+    <div class="debug-panel" id="debugPanel">
+        <i class="fas fa-terminal"></i> 系统日志<br>
+    </div>
+</div>
 
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
-        }
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
+<script>
+    const broker = 'wss://broker.emqx.io:8084/mqtt';
+    const options = {
+        connectTimeout: 4000,
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+        keepalive: 60
+    };
+    const client = mqtt.connect(broker, options);
+    const debugDiv = document.getElementById('debugPanel');
 
-        // ========== 侧边栏折叠逻辑 ==========
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-        const toggleBtn = document.getElementById('toggleSidebarBtn');
+    function addLog(msg) {
+        const p = document.createElement('div');
+        p.innerText = msg;
+        debugDiv.appendChild(p);
+        console.log(msg);
+        debugDiv.scrollTop = debugDiv.scrollHeight;
+    }
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-            if (sidebar.classList.contains('collapsed')) {
-                toggleBtn.classList.add('shifted');
-            } else {
-                toggleBtn.classList.remove('shifted');
-            }
-        }
-        toggleBtn.addEventListener('click', toggleSidebar);
-
-        // ========== MQTT 连接逻辑 ==========
-        const broker = 'wss://broker.emqx.io:8084/mqtt';
-        const options = {
-            connectTimeout: 4000,
-            clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-            keepalive: 60
-        };
-        const client = mqtt.connect(broker, options);
-        const debugDiv = document.getElementById('debug');
-
-        function addDebug(msg) {
-            const p = document.createElement('div');
-            p.className = 'debug-line';
-            p.innerText = msg;
-            debugDiv.appendChild(p);
-            console.log(msg);
-            debugDiv.scrollTop = debugDiv.scrollHeight;
-        }
-
-        client.on('connect', () => {
-            addDebug('✅ 已连接到 MQTT Broker');
-            document.getElementById('status').innerHTML = '✅ 已连接到云服务器';
-            document.getElementById('status').className = 'status online';
-            client.subscribe('factory/#', (err) => {
-                if (err) addDebug('❌ 订阅失败: ' + err);
-                else addDebug('📡 已订阅 factory/#');
-            });
+    client.on('connect', () => {
+        addLog('✅ MQTT 连接成功 (broker.emqx.io)');
+        document.getElementById('mqttStatus').innerHTML = '在线 <i class="fas fa-check-circle"></i>';
+        client.subscribe('factory/#', (err) => {
+            if (err) addLog('❌ 订阅失败: ' + err);
+            else addLog('📡 已订阅主题 factory/#');
         });
+    });
 
-        client.on('message', (topic, message) => {
-            const msgStr = message.toString();
-            addDebug(`📨 收到消息 [${topic}]: ${msgStr}`);
-            try {
-                const data = JSON.parse(msgStr);
-                if (topic === 'factory/temphumi') {
-                    if (typeof data.temp !== 'undefined') {
-                        document.getElementById('temp').innerText = data.temp.toFixed(1);
-                        document.getElementById('humi').innerText = data.humi.toFixed(1);
-                        
-                        const alarmStatus = document.getElementById('alarmStatus');
-                        if (data.alarm) {
-                            alarmStatus.innerHTML = '🔔 超过阈值，蜂鸣器报警';
-                            alarmStatus.className = 'alarm-status alarm-on';
-                        } else {
-                            alarmStatus.innerHTML = '✅ 湿度正常';
-                            alarmStatus.className = 'alarm-status';
-                        }
+    client.on('message', (topic, message) => {
+        const raw = message.toString();
+        addLog(`📨 [${topic}] ${raw}`);
+        try {
+            const data = JSON.parse(raw);
+            if (topic === 'factory/temphumi') {
+                if (data.temp !== undefined) {
+                    document.getElementById('tempDisplay').innerHTML = data.temp.toFixed(1) + ' °C';
+                    document.getElementById('humiDisplay').innerHTML = data.humi.toFixed(1) + ' %';
+                    const alarmDiv = document.getElementById('alarmDisplay');
+                    if (data.alarm === 1 || data.alarm === true) {
+                        alarmDiv.innerHTML = '🔔 湿度超限报警！';
+                        alarmDiv.className = 'alarm-badge alarm-on';
                     } else {
-                        addDebug('⚠️ 温湿度数据缺少 temp/humi 字段');
-                    }
-                } else if (topic === 'factory/finger') {
-                    const fingerStatusDiv = document.getElementById('fingerStatusDiv');
-                    const fingerStatusText = document.getElementById('fingerStatusText');
-                    
-                    if (data.success === 1 || data.success === true) {
-                        fingerStatusDiv.className = 'finger-status success';
-                        fingerStatusDiv.querySelector('.status-icon').innerText = '✅';
-                        fingerStatusText.innerHTML = `验证成功 (ID: ${data.userId}) 时间: ${data.time || '刚刚'}`;
-                    } else {
-                        fingerStatusDiv.className = 'finger-status waiting';
-                        fingerStatusDiv.querySelector('.status-icon').innerText = '⏳';
-                        fingerStatusText.innerHTML = '等待指纹...';
-                    }
-                    
-                    if (data.raw) {
-                        document.getElementById('fingerRaw').innerHTML = `原始数据: ${data.raw}`;
+                        alarmDiv.innerHTML = '✅ 湿度正常';
+                        alarmDiv.className = 'alarm-badge alarm-off';
                     }
                 }
-            } catch (e) {
-                addDebug(`❌ JSON 解析错误: ${e.message}`);
+            } else if (topic === 'factory/finger') {
+                const statusDiv = document.getElementById('fingerStatusText');
+                const idInfo = document.getElementById('fingerIdInfo');
+                const rawFrameDiv = document.getElementById('rawDataFrame');
+                if (data.success === 1 || data.success === true) {
+                    statusDiv.innerHTML = '✅ 验证成功';
+                    statusDiv.className = 'finger-status success';
+                    idInfo.innerHTML = `用户 ID: ${data.userId} | 时间: ${data.time || '刚刚'}`;
+                } else {
+                    statusDiv.innerHTML = '⏳ 等待指纹';
+                    statusDiv.className = 'finger-status fail';
+                    idInfo.innerHTML = '';
+                }
+                if (data.raw) rawFrameDiv.innerHTML = `原始数据: ${data.raw}`;
             }
-        });
+        } catch (e) {
+            addLog(`❌ JSON解析错误: ${e.message}`);
+        }
+    });
 
-        client.on('error', (err) => {
-            addDebug(`❌ 连接错误: ${err.message}`);
-            document.getElementById('status').innerHTML = '❌ 连接错误，请刷新页面重试';
-            document.getElementById('status').className = 'status offline';
-        });
-    </script>
+    client.on('error', (err) => {
+        addLog(`❌ MQTT 错误: ${err.message}`);
+        document.getElementById('mqttStatus').innerHTML = '离线';
+    });
+</script>
 </body>
 </html>

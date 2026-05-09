@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验1.1：CC2530终端与协调器的无线传输</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0f1e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #eef2ff;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: rgba(18, 25, 45, 0.8);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            padding: 2rem;
+            border: 1px solid #2dd4bf40;
+        }
+        h1 { color: #2dd4bf; margin-bottom: 1rem; }
+        h2 { margin: 1.5rem 0 1rem 0; border-left: 4px solid #2dd4bf; padding-left: 12px; }
+        p { line-height: 1.6; margin: 1rem 0; }
+        pre {
+            background: #000000aa;
+            padding: 1rem;
+            border-radius: 16px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+        }
+        a.button {
+            display: inline-block;
+            margin-top: 2rem;
+            background: #2dd4bf20;
+            border: 1px solid #2dd4bf;
+            color: #2dd4bf;
+            padding: 8px 20px;
+            border-radius: 40px;
+            text-decoration: none;
+        }
+        a.button:hover { background: #2dd4bf40; }
+        .note {
+            background: #f9731620;
+            border-left: 4px solid #f97316;
+            padding: 0.8rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+<div class="container">
+    <h1>📡 实验1.1：CC2530终端与协调器的无线传输</h1>
+    <p>本实验实现CC2530终端节点采集DHT11温湿度数据，并通过ZigBee网络发送到协调器。协调器通过串口将数据转发给上位机。</p>
+    <h2>🎯 实验目的</h2>
+    <p>理解ZigBee协议栈的基本通信原理，掌握CC2530的无线数据收发流程。</p>
+    <h2>🔧 硬件接线</h2>
+    <p>终端：DHT11数据脚接P0_7，VCC→3.3V，GND→GND。<br>协调器：P0_2(RX)/P0_3(TX)接USB转串口模块（或ESP8266）。</p>
+    <h2>📄 关键代码（终端节点 - 发送部分）</h2>
+    <pre><code class="language-c">// 基于 Z-Stack 的发送函数示例
+void sendTempHumi(uint16 temp, uint16 humi) {
+    uint8 data[4];
+    data[0] = temp >> 8;
+    data[1] = temp & 0xFF;
+    data[2] = humi >> 8;
+    data[3] = humi & 0xFF;
+    
+    AF_DataRequest(&amp;dstAddr, &amp;epDesc, SAMPLEAPP_CLUSTERID,
+                   4, data, &amp;transID, AF_DISCV_ROUTE, AF_DEFAULT_RADIUS);
+}</code></pre>
+    <h2>📥 协调器接收部分</h2>
+    <pre><code class="language-c">// 在回调函数中接收数据
+void SampleApp_MessageMSGCB(afIncomingMSGPacket_t *pkt) {
+    switch(pkt->clusterId) {
+        case SAMPLEAPP_CLUSTERID:
+            uint16 temp = (pkt->cmd.Data[0] << 8) | pkt->cmd.Data[1];
+            uint16 humi = (pkt->cmd.Data[2] << 8) | pkt->cmd.Data[3];
+            // 通过串口输出
+            printf("Temp=%d, Humi=%d\r\n", temp, humi);
+            break;
+    }
+}</code></pre>
+    <div class="note">
+        <strong>💡 常见问题：</strong> 终端无法加入网络？<br>
+        检查协调器是否先上电，并确保PAN ID和信道一致。
+    </div>
+    <a href="index.html" class="button">← 返回主监控大屏</a>
+</div>
+</body>
+</html>

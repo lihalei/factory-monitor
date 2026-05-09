@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* 样式保持不变（与之前相同） */
+        /* 原有样式保留，只新增 .live-data */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: radial-gradient(circle at 20% 30%, #0c1126, #020617);
@@ -41,6 +41,15 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+        }
+        .live-data {
+            font-size: 1.2rem;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            letter-spacing: 1px;
         }
         .status-badge {
             display: flex;
@@ -191,6 +200,13 @@
                 position: static;
                 margin-top: 1.5rem;
             }
+            .live-data {
+                font-size: 0.9rem;
+                padding: 0.2rem 0.6rem;
+            }
+            .top-bar {
+                gap: 0.5rem;
+            }
         }
     </style>
 </head>
@@ -201,6 +217,10 @@
             <i class="fas fa-shield-alt"></i>
             <span>智能安防网络示教平台</span>
         </div>
+        <div class="live-data" id="liveData">
+            <span id="liveTemp">--</span> °C &nbsp;|&nbsp;
+            <span id="liveHumi">--</span> %
+        </div>
         <div class="status-badge">
             <span class="online-led"></span>
             <span id="mqttStatus">连接中...</span>
@@ -209,6 +229,7 @@
 
     <div class="main-grid">
         <div class="cards-area">
+            <!-- 温湿度卡片 -->
             <div class="card">
                 <h2><i class="fas fa-thermometer-half"></i> 环境监测</h2>
                 <div class="big-value temp-value" id="tempDisplay">-- °C</div>
@@ -217,10 +238,12 @@
                     <span id="alarmDisplay" class="alarm-badge alarm-off">湿度正常</span>
                 </div>
             </div>
+            <!-- 历史曲线卡片 -->
             <div class="card" style="min-width: 400px;">
                 <h2><i class="fas fa-chart-line"></i> 温湿度历史曲线（最近50条）</h2>
                 <div id="historyChart" style="height: 300px; width: 100%;"></div>
             </div>
+            <!-- 指纹门禁卡片 -->
             <div class="card">
                 <h2><i class="fas fa-fingerprint"></i> 指纹门禁</h2>
                 <div class="finger-status" id="fingerStatusText">等待指纹...</div>
@@ -270,8 +293,6 @@
     let tempData = [];
     let humiData = [];
     let timeLabels = [];
-
-    // 防抖/节流：限制图表更新频率
     let pendingChartUpdate = false;
     let lastTemp = null, lastHumi = null;
     let chartUpdateTimeout = null;
@@ -306,7 +327,6 @@
         lastHumi = humi;
         if (!pendingChartUpdate) {
             pendingChartUpdate = true;
-            // 延迟更新，避免连续高频更新
             chartUpdateTimeout = setTimeout(() => {
                 applyChartUpdate();
             }, 100);
@@ -330,7 +350,6 @@
                 { name: '湿度', type: 'line', smooth: true, data: [], lineStyle: { color: '#38bdf8' }, symbol: 'circle', symbolSize: 6, animation: false }
             ]
         });
-        // 关闭动画以减少性能开销
         historyChart.setOption({ animation: false });
     }
 
@@ -376,8 +395,11 @@
             const data = JSON.parse(raw);
             if (topic === 'factory/temphumi') {
                 if (typeof data.temp !== 'undefined') {
+                    // 更新各个显示位置
                     document.getElementById('tempDisplay').innerHTML = data.temp.toFixed(1) + ' °C';
                     document.getElementById('humiDisplay').innerHTML = data.humi.toFixed(1) + ' %';
+                    document.getElementById('liveTemp').innerHTML = data.temp.toFixed(1);
+                    document.getElementById('liveHumi').innerHTML = data.humi.toFixed(1);
                     const alarmDiv = document.getElementById('alarmDisplay');
                     if (data.alarm) {
                         alarmDiv.innerHTML = '🔔 湿度超限报警！';
@@ -417,7 +439,6 @@
         document.getElementById('mqttStatus').innerHTML = '离线';
     });
 
-    // 页面初始化
     window.onload = () => {
         initHistoryChart();
         loadHistory();

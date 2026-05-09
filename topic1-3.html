@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验1.3：ESP8266与传感器间的数据传输</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0f1e; font-family: 'Segoe UI', sans-serif; color: #eef2ff; padding: 2rem; }
+        .container { max-width: 1100px; margin: 0 auto; background: rgba(18,25,45,0.8); backdrop-filter: blur(8px); border-radius: 32px; padding: 2rem; border: 1px solid #2dd4bf40; }
+        h1 { color: #2dd4bf; margin-bottom: 1rem; }
+        h2 { margin: 1.5rem 0 1rem 0; border-left: 4px solid #2dd4bf; padding-left: 12px; }
+        p { line-height: 1.6; margin: 1rem 0; }
+        pre { background: #000000aa; padding: 1rem; border-radius: 16px; overflow-x: auto; font-family: monospace; font-size: 0.85rem; margin: 1rem 0; }
+        a.button { display: inline-block; margin-top: 2rem; background: #2dd4bf20; border: 1px solid #2dd4bf; color: #2dd4bf; padding: 8px 20px; border-radius: 40px; text-decoration: none; }
+        a.button:hover { background: #2dd4bf40; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+<div class="container">
+    <h1>🌡️ 实验1.3：ESP8266与传感器间的数据传输</h1>
+    <p>本实验展示ESP8266如何读取温湿度传感器的值，并进行本地处理（例如超限报警）。</p>
+    <h2>🎯 实验目的</h2>
+    <p>学习数据解析与阈值判断，掌握蜂鸣器驱动。</p>
+    <h2>📊 数据解析与报警</h2>
+    <pre><code class="language-cpp">float temp = buf[16];
+float humi = buf[17];
+if (humi >= threshold) {
+    tone(BUZZER_PIN, 2000);
+} else {
+    noTone(BUZZER_PIN);
+}</code></pre>
+    <p>同时，数据可通过Web页面实时显示（见实验1.4）。</p>
+    <a href="index.html" class="button">← 返回主监控大屏</a>
+</div>
+</body>
+</html>

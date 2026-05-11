@@ -105,12 +105,15 @@
     </div>
     <button id="loginBtn">登录</button>
     <div class="error-msg" id="errorMsg"></div>
-    <div class="tips">教师账号: teacher / 123 &nbsp;|&nbsp; 学生账号: student / 123</div>
+    <div class="tips">教师账号: 20220901 / 214214 &nbsp;|&nbsp; 学生账号: 20220901 / 220444</div>
 </div>
 <script>
+    // 账号相同，通过密码区分角色
     const validUsers = {
-        teacher: { password: '123', role: '教师' },
-        student: { password: '123', role: '学生' }
+        '20220901': {
+            '214214': { role: '教师', name: '教师' },
+            '220444': { role: '学生', name: '学生' }
+        }
     };
     document.getElementById('loginBtn').addEventListener('click', () => {
         const username = document.getElementById('username').value.trim();
@@ -121,12 +124,13 @@
             return;
         }
         const user = validUsers[username];
-        if (!user || user.password !== password) {
+        if (!user || !user[password]) {
             errorDiv.innerText = '账号或密码错误';
             return;
         }
+        const role = user[password].role;
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userRole', user.role);
+        localStorage.setItem('userRole', role);
         localStorage.setItem('username', username);
         window.location.href = 'index.html';
     });

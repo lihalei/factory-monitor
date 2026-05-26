@@ -30,11 +30,6 @@
             margin-bottom: 2rem;
             border: 1px solid rgba(45, 212, 191, 0.3);
         }
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
         .logo {
             display: flex;
             align-items: center;
@@ -45,38 +40,6 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-        }
-        .role-badge {
-            background: #2dd4bf20;
-            border: 1px solid #2dd4bf;
-            border-radius: 30px;
-            padding: 4px 12px;
-            font-size: 0.8rem;
-            color: #2dd4bf;
-        }
-        .datetime {
-            font-size: 1.1rem;
-            font-weight: 500;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 0.3rem 1rem;
-            border-radius: 40px;
-            backdrop-filter: blur(4px);
-            font-family: monospace;
-            letter-spacing: 1px;
-        }
-        .logout-btn {
-            background: rgba(255, 80, 80, 0.2);
-            border: 1px solid #ff6b6b;
-            color: #ff6b6b;
-            padding: 6px 14px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .logout-btn:hover {
-            background: #ff6b6b30;
-            box-shadow: 0 0 6px #ff6b6b;
         }
         .status-badge {
             display: flex;
@@ -220,35 +183,32 @@
             overflow-y: auto;
         }
         @media (max-width: 900px) {
-            .main-grid { grid-template-columns: 1fr; }
-            .sidebar { position: static; margin-top: 1.5rem; }
-            .datetime { font-size: 0.8rem; padding: 0.2rem 0.6rem; }
-            .top-bar { gap: 0.5rem; }
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+                margin-top: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
 <div class="dashboard">
     <div class="top-bar">
-        <div class="logo-area">
-            <div class="logo">
-                <i class="fas fa-shield-alt"></i>
-                <span>智能安防网络示教平台</span>
-            </div>
-            <div class="role-badge" id="roleBadge">加载中...</div>
+        <div class="logo">
+            <i class="fas fa-shield-alt"></i>
+            <span>智能安防网络示教平台</span>
         </div>
-        <div class="datetime" id="datetimeDisplay">--:--:--</div>
-        <div style="display: flex; gap: 12px;">
-            <button class="logout-btn" id="logoutBtn">退出登录</button>
-            <div class="status-badge">
-                <span class="online-led"></span>
-                <span id="mqttStatus">连接中...</span>
-            </div>
+        <div class="status-badge">
+            <span class="online-led"></span>
+            <span id="mqttStatus">连接中...</span>
         </div>
     </div>
 
     <div class="main-grid">
         <div class="cards-area">
+            <!-- 温湿度卡片 -->
             <div class="card">
                 <h2><i class="fas fa-thermometer-half"></i> 环境监测</h2>
                 <div class="big-value temp-value" id="tempDisplay">-- °C</div>
@@ -257,10 +217,14 @@
                     <span id="alarmDisplay" class="alarm-badge alarm-off">湿度正常</span>
                 </div>
             </div>
+
+            <!-- 历史曲线卡片 -->
             <div class="card" style="min-width: 400px;">
                 <h2><i class="fas fa-chart-line"></i> 温湿度历史曲线（最近50条）</h2>
                 <div id="historyChart" style="height: 300px; width: 100%;"></div>
             </div>
+
+            <!-- 指纹门禁卡片 -->
             <div class="card">
                 <h2><i class="fas fa-fingerprint"></i> 指纹门禁</h2>
                 <div class="finger-status" id="fingerStatusText">等待指纹...</div>
@@ -268,6 +232,8 @@
                 <div class="raw-frame" id="rawDataFrame">原始数据: 无</div>
             </div>
         </div>
+
+        <!-- 实验指导侧边栏 -->
         <div class="sidebar">
             <h3><i class="fas fa-chalkboard-user"></i> 实验指导</h3>
             <ul>
@@ -280,52 +246,15 @@
             <p style="margin-top: 20px;"><i class="fas fa-external-link-alt"></i> 点击链接在新标签页打开实验详情。</p>
         </div>
     </div>
+
+    <!-- 调试信息区域 -->
     <div class="debug-panel" id="debugPanel">
         <i class="fas fa-terminal"></i> 系统日志<br>
     </div>
 </div>
 
 <script>
-    // ---------- 登录验证 ----------
-    (function checkLogin() {
-        const isLoggedIn = localStorage.getItem('isLoggedIn');
-        const userRole = localStorage.getItem('userRole');
-        if (!isLoggedIn || isLoggedIn !== 'true') {
-            window.location.href = 'login.html';
-            return;
-        }
-        const roleBadge = document.getElementById('roleBadge');
-        if (roleBadge) roleBadge.innerText = userRole + '端';
-        console.log(`当前身份: ${userRole}`);
-        // 可根据角色限制功能，例如学生隐藏某些设置按钮，这里仅示例
-        if (userRole === '学生') {
-            // 学生模式下可以禁用阈值输入框（如果有）
-        }
-    })();
-
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('username');
-        window.location.href = 'login.html';
-    });
-
-    // ---------- 实时日期时间 ----------
-    function updateDateTime() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-        const datetimeStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        document.getElementById('datetimeDisplay').innerText = datetimeStr;
-    }
-    setInterval(updateDateTime, 1000);
-    updateDateTime();
-
-    // ---------- MQTT 与图表功能 ----------
+    // -------------------- MQTT 配置 --------------------
     const broker = 'wss://broker.emqx.io:8084/mqtt';
     const options = {
         connectTimeout: 4000,
@@ -334,6 +263,7 @@
     };
     const client = mqtt.connect(broker, options);
     const debugDiv = document.getElementById('debugPanel');
+
     function addLog(msg) {
         const p = document.createElement('div');
         p.innerText = msg;
@@ -342,34 +272,11 @@
         debugDiv.scrollTop = debugDiv.scrollHeight;
     }
 
+    // -------------------- ECharts 历史曲线 --------------------
     let historyChart = null;
-    let tempData = [], humiData = [], timeLabels = [];
-    let pendingChartUpdate = false, lastTemp = null, lastHumi = null, chartUpdateTimeout = null;
-
-    function applyChartUpdate() {
-        if (lastTemp !== null && lastHumi !== null && historyChart) {
-            tempData.push(lastTemp);
-            humiData.push(lastHumi);
-            timeLabels.push(timeLabels.length + 1);
-            if (tempData.length > 50) { tempData.shift(); humiData.shift(); timeLabels.shift(); }
-            historyChart.setOption({
-                xAxis: { data: timeLabels.slice() },
-                series: [{ data: tempData.slice() }, { data: humiData.slice() }]
-            });
-            lastTemp = null; lastHumi = null;
-        }
-        pendingChartUpdate = false;
-        if (chartUpdateTimeout) clearTimeout(chartUpdateTimeout);
-        chartUpdateTimeout = null;
-    }
-
-    function scheduleChartUpdate(temp, humi) {
-        lastTemp = temp; lastHumi = humi;
-        if (!pendingChartUpdate) {
-            pendingChartUpdate = true;
-            chartUpdateTimeout = setTimeout(applyChartUpdate, 100);
-        }
-    }
+    let tempData = [];
+    let humiData = [];
+    let timeLabels = [];
 
     function initHistoryChart() {
         const dom = document.getElementById('historyChart');
@@ -384,11 +291,30 @@
                 { type: 'value', name: '湿度', nameTextStyle: { color: '#ccc' }, axisLabel: { color: '#ccc' } }
             ],
             series: [
-                { name: '温度', type: 'line', smooth: true, data: [], lineStyle: { color: '#f97316' }, symbol: 'circle', symbolSize: 6, animation: false },
-                { name: '湿度', type: 'line', smooth: true, data: [], lineStyle: { color: '#38bdf8' }, symbol: 'circle', symbolSize: 6, animation: false }
+                { name: '温度', type: 'line', smooth: true, data: [], lineStyle: { color: '#f97316' }, symbol: 'circle', symbolSize: 6 },
+                { name: '湿度', type: 'line', smooth: true, data: [], lineStyle: { color: '#38bdf8' }, symbol: 'circle', symbolSize: 6 }
             ]
         });
-        historyChart.setOption({ animation: false });
+    }
+
+    function updateChart(temp, humi) {
+        tempData.push(temp);
+        humiData.push(humi);
+        timeLabels.push(timeLabels.length + 1);
+        if (tempData.length > 50) {
+            tempData.shift();
+            humiData.shift();
+            timeLabels.shift();
+        }
+        if (historyChart) {
+            historyChart.setOption({
+                xAxis: { data: timeLabels },
+                series: [
+                    { data: [...tempData] },
+                    { data: [...humiData] }
+                ]
+            });
+        }
     }
 
     async function loadHistory() {
@@ -400,15 +326,25 @@
                 tempData = data.map(p => p.temp);
                 humiData = data.map(p => p.humi);
                 timeLabels = data.map((_, i) => i+1);
-                historyChart.setOption({
-                    xAxis: { data: timeLabels.slice() },
-                    series: [{ data: tempData.slice() }, { data: humiData.slice() }]
-                });
+                if (historyChart) {
+                    historyChart.setOption({
+                        xAxis: { data: timeLabels },
+                        series: [
+                            { data: tempData },
+                            { data: humiData }
+                        ]
+                    });
+                }
                 addLog(`📊 已加载历史数据 (${data.length} 条)`);
-            } else addLog('📊 无历史数据');
-        } catch(e) { addLog('❌ 加载历史数据失败: ' + e.message); }
+            } else {
+                addLog('📊 无历史数据');
+            }
+        } catch(e) {
+            addLog('❌ 加载历史数据失败: ' + e.message);
+        }
     }
 
+    // -------------------- MQTT 回调 --------------------
     client.on('connect', () => {
         addLog('✅ MQTT 连接成功 (broker.emqx.io)');
         document.getElementById('mqttStatus').innerHTML = '在线 <i class="fas fa-check-circle"></i>';
@@ -435,7 +371,7 @@
                         alarmDiv.innerHTML = '✅ 湿度正常';
                         alarmDiv.className = 'alarm-badge alarm-off';
                     }
-                    scheduleChartUpdate(data.temp, data.humi);
+                    updateChart(data.temp, data.humi);
                 }
             } else if (topic === 'factory/finger') {
                 const statusDiv = document.getElementById('fingerStatusText');
@@ -456,7 +392,9 @@
                 }
                 if (data.raw) rawFrameDiv.innerHTML = `原始数据: ${data.raw}`;
             }
-        } catch(e) { addLog(`❌ JSON解析错误: ${e.message}`); }
+        } catch (e) {
+            addLog(`❌ JSON解析错误: ${e.message}`);
+        }
     });
 
     client.on('error', (err) => {
@@ -464,6 +402,7 @@
         document.getElementById('mqttStatus').innerHTML = '离线';
     });
 
+    // -------------------- 页面加载初始化 --------------------
     window.onload = () => {
         initHistoryChart();
         loadHistory();
